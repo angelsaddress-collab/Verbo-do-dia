@@ -1,0 +1,461 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verbo do Dia 🇵🇹</title>
+<style>
+:root {
+  --green:#174638;
+  --light:#f5f6ef;
+  --white:#fff;
+  --muted:#65766d;
+}
+* {box-sizing:border-box}
+body {
+  margin:0;
+  background:var(--light);
+  color:#20342b;
+  font-family:system-ui,-apple-system,sans-serif;
+}
+header {
+  background:var(--green);
+  color:white;
+  padding:28px 20px;
+}
+header h1 {margin:0;font-size:2.3rem}
+header p {margin:8px 0 0;color:#dcece2}
+main {max-width:760px;margin:auto;padding:18px}
+nav {display:flex;gap:8px;margin-bottom:18px}
+button {
+  border:0;border-radius:12px;
+  padding:12px 16px;
+  font:inherit;font-weight:650;
+  cursor:pointer;
+}
+nav button {flex:1;background:#e3ebe5}
+button.primary {background:var(--green);color:white}
+button.secondary {background:#e3ebe5;color:var(--green)}
+.card {
+  background:white;border-radius:18px;
+  padding:20px;margin-bottom:16px;
+  box-shadow:0 4px 18px #183c2910;
+}
+.badge {
+  display:inline-block;background:#e3eee7;
+  padding:5px 10px;border-radius:30px;
+  font-size:12px;font-weight:bold;
+}
+.meaning {color:var(--muted)}
+h2 {margin:10px 0 3px;font-size:1.9rem}
+.answer {
+  display:grid;
+  grid-template-columns:100px 1fr;
+  gap:10px;align-items:center;
+  margin:12px 0;
+}
+input {
+  width:100%;min-width:0;
+  border:1px solid #ccd8ce;
+  border-radius:10px;padding:12px;
+  font:inherit;
+}
+.feedback {font-size:13px;margin-top:4px}
+.good {color:#16804b}
+.bad {color:#b8463b}
+.hint {
+  background:#fff6dc;
+  padding:12px;border-radius:10px;
+  margin:12px 0;
+}
+.actions {display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.hidden {display:none}
+.stat {
+  display:inline-block;
+  padding:12px;margin:5px;
+  background:#eaf2eb;border-radius:12px;
+}
+.stat strong {display:block;font-size:1.6rem}
+footer {
+  text-align:center;color:var(--muted);
+  padding:20px;font-size:13px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="max-width:760px;margin:auto">
+    <small>🇵🇹 EUROPEAN PORTUGUESE</small>
+    <h1>Verbo do Dia</h1>
+    <p>Two verbs. Every day. A little progress.</p>
+  </div>
+</header>
+
+<main>
+<nav>
+  <button onclick="show('challenge')">Challenge</button>
+  <button onclick="show('progress')">Progress</button>
+  <button onclick="show('rules')">Verb rules</button>
+</nav>
+
+<section id="challenge">
+  <div class="card">
+    <span class="badge">A1–A2 · PRESENT TENSE</span>
+    <h2>Today's challenge</h2>
+    <p class="meaning">
+      Complete all six forms for each verb.
+      Use a hint if you need one!
+    </p>
+  </div>
+  <div id="questions"></div>
+  <button class="primary" onclick="newChallenge()">
+    ↻ Give me two new verbs
+  </button>
+</section>
+
+<section id="progress" class="hidden">
+  <div class="card">
+    <h2>My progress</h2>
+    <div id="stats"></div>
+  </div>
+  <div class="card">
+    <h3>Verbs to practise again</h3>
+    <div id="revision"></div>
+  </div>
+  <button class="secondary" onclick="exportProgress()">
+    Download progress
+  </button>
+</section>
+
+<section id="rules" class="hidden">
+  <div class="card">
+    <h2>Present tense endings</h2>
+    <p>Remove -ar, -er or -ir and add:</p>
+    <div id="rulesContent"></div>
+  </div>
+</section>
+</main>
+
+<footer>Feito com carinho 🇵🇹</footer>
+
+<script>
+const people=[
+  "eu","tu","ele / ela",
+  "nós","vocês","eles / elas"
+];
+
+const endings={
+  ar:["o","as","a","amos","am","am"],
+  er:["o","es","e","emos","em","em"],
+  ir:["o","es","e","imos","em","em"]
+};
+
+const words=[
+["falar","to speak"],["estudar","to study"],
+["trabalhar","to work"],["morar","to live"],
+["lavar","to wash"],["ajudar","to help"],
+["comprar","to buy"],["gostar","to like"],
+["cantar","to sing"],["dançar","to dance"],
+["cozinhar","to cook"],["visitar","to visit"],
+["esperar","to wait"],["andar","to walk"],
+["entrar","to enter"],["nadar","to swim"],
+["desenhar","to draw"],["brincar","to play"],
+["telefonar","to telephone"],["limpar","to clean"],
+["comer","to eat"],["beber","to drink"],
+["vender","to sell"],["aprender","to learn"],
+["receber","to receive"],["responder","to answer"],
+["dever","to owe / should"],["prometer","to promise"],
+["meter","to put"],["correr","to run"],
+["escrever","to write"],["viver","to live"],
+["abrir","to open"],["partir","to leave"],
+["decidir","to decide"],["assistir","to watch / attend"],
+["permitir","to allow"],["dividir","to divide"],
+["discutir","to discuss"],["existir","to exist"],
+["insistir","to insist"]
+];
+
+const KEY="verboDoDia2";
+const fresh=()=>({
+  date:"",pair:[],answers:{},
+  results:{},review:[],
+  attempts:[],days:[],challenges:0
+});
+
+let data;
+try {
+  data={...fresh(),...JSON.parse(
+    localStorage.getItem(KEY)||"{}"
+  )};
+} catch {
+  data=fresh();
+}
+
+const day=()=>new Date().toLocaleDateString("sv-SE");
+const save=()=>localStorage.setItem(KEY,JSON.stringify(data));
+
+function forms(word){
+  const family=word.slice(-2);
+  const stem=word.slice(0,-2);
+  return endings[family].map(e=>stem+e);
+}
+
+function selectVerbs(){
+  let result=[];
+  const review=data.review.filter(i=>i>=0&&i<words.length);
+  if(review.length&&Math.random()<0.7){
+    result.push(review[Math.floor(Math.random()*review.length)]);
+  }
+  let available=words.map((_,i)=>i).filter(
+    i=>!result.includes(i)&&!data.pair.includes(i)
+  );
+  while(result.length<2){
+    if(!available.length){
+      available=words.map((_,i)=>i).filter(
+        i=>!result.includes(i)
+      );
+    }
+    const index=Math.floor(Math.random()*available.length);
+    result.push(available.splice(index,1)[0]);
+  }
+  return result;
+}
+
+function newChallenge(){
+  data.pair=selectVerbs();
+  data.date=day();
+  data.answers={};
+  data.results={};
+  data.challenges++;
+  save();
+  render();
+}
+
+function render(){
+  const host=document.getElementById("questions");
+  host.innerHTML="";
+
+  data.pair.forEach((id,n)=>{
+    const [word,meaning]=words[id];
+    const family=word.slice(-2);
+    const card=document.createElement("article");
+    card.className="card";
+
+    const badge=document.createElement("span");
+    badge.className="badge";
+    badge.textContent=`VERB ${n+1} · -${family.toUpperCase()}`;
+    card.append(badge);
+
+    const heading=document.createElement("h2");
+    heading.textContent=word;
+    card.append(heading);
+
+    const translation=document.createElement("p");
+    translation.className="meaning";
+    translation.textContent=meaning;
+    card.append(translation);
+
+    const hintButton=document.createElement("button");
+    hintButton.className="secondary";
+    hintButton.textContent="💡 Show hint";
+    card.append(hintButton);
+
+    const hint=document.createElement("div");
+    hint.className="hint hidden";
+    hint.textContent=
+      `Stem: ${word.slice(0,-2)}-. `+
+      `Use the regular -${family} present endings.`;
+    hintButton.onclick=()=>hint.classList.toggle("hidden");
+    card.append(hint);
+
+    const inputs=[];
+    const feedback=[];
+
+    people.forEach((person,i)=>{
+      const row=document.createElement("div");
+      row.className="answer";
+
+      const label=document.createElement("label");
+      label.textContent=person;
+
+      const box=document.createElement("div");
+      const input=document.createElement("input");
+      input.placeholder="Type answer";
+      input.autocomplete="off";
+      input.spellcheck=false;
+      input.value=data.answers[id+"-"+i]||"";
+      input.setAttribute("aria-label",person+" "+word);
+
+      input.oninput=()=>{
+        data.answers[id+"-"+i]=input.value;
+        save();
+      };
+
+      const msg=document.createElement("div");
+      msg.className="feedback";
+
+      box.append(input,msg);
+      row.append(label,box);
+      card.append(row);
+      inputs.push(input);
+      feedback.push(msg);
+    });
+
+    const actions=document.createElement("div");
+    actions.className="actions";
+
+    const check=document.createElement("button");
+    check.className="primary";
+    check.textContent="Check answers";
+
+    const retry=document.createElement("button");
+    retry.className="secondary";
+    retry.textContent="Try again";
+
+    const score=document.createElement("p");
+    score.setAttribute("aria-live","polite");
+
+    const review=document.createElement("button");
+    review.className="secondary";
+    review.textContent="⭐ Practise again later";
+
+    check.onclick=()=>{
+      const correct=forms(word);
+      let total=0;
+
+      inputs.forEach((input,i)=>{
+        const answer=input.value.trim().toLocaleLowerCase("pt-PT");
+        const ok=answer===correct[i];
+        if(ok)total++;
+
+        feedback[i].textContent=ok
+          ?"✓ Correct!"
+          :"Correct: "+correct[i];
+        feedback[i].className=
+          "feedback "+(ok?"good":"bad");
+      });
+
+      score.textContent=`Score: ${total}/6`;
+      data.results[id]=total;
+      data.attempts.unshift({
+        word,score:total,date:day()
+      });
+      data.attempts=data.attempts.slice(0,100);
+
+      if(!data.days.includes(day()))data.days.push(day());
+
+      if(total<6&&!data.review.includes(id)){
+        data.review.push(id);
+      }
+      save();
+    };
+
+    retry.onclick=()=>{
+      inputs.forEach((input,i)=>{
+        input.value="";
+        feedback[i].textContent="";
+        delete data.answers[id+"-"+i];
+      });
+      score.textContent="";
+      save();
+    };
+
+    review.onclick=()=>{
+      if(!data.review.includes(id)){
+        data.review.push(id);
+        save();
+      }
+      review.textContent="✓ Added to revision";
+    };
+
+    actions.append(check,retry,review);
+    card.append(actions,score);
+    host.append(card);
+  });
+}
+
+function show(section){
+  ["challenge","progress","rules"].forEach(id=>{
+    document.getElementById(id).classList.toggle(
+      "hidden",id!==section
+    );
+  });
+  if(section==="progress")renderProgress();
+}
+
+function renderProgress(){
+  const total=data.attempts.length;
+  const average=total?Math.round(
+    data.attempts.reduce((s,a)=>s+a.score,0)/(total*6)*100
+  ):0;
+
+  document.getElementById("stats").innerHTML=
+    `<div class="stat"><strong>${data.challenges}</strong>Challenges</div>`+
+    `<div class="stat"><strong>${total}</strong>Verbs checked</div>`+
+    `<div class="stat"><strong>${average}%</strong>Accuracy</div>`+
+    `<div class="stat"><strong>${data.days.length}</strong>Practice days</div>`;
+
+  const list=document.getElementById("revision");
+  list.innerHTML="";
+
+  if(!data.review.length){
+    list.textContent="No verbs need revision yet!";
+  }
+
+  data.review.forEach(id=>{
+    const row=document.createElement("p");
+    row.textContent=words[id][0]+" — "+words[id][1]+" ";
+    const remove=document.createElement("button");
+    remove.className="secondary";
+    remove.textContent="Mastered ✓";
+    remove.onclick=()=>{
+      data.review=data.review.filter(x=>x!==id);
+      save();
+      renderProgress();
+    };
+    row.append(remove);
+    list.append(row);
+  });
+}
+
+function exportProgress(){
+  const file=new Blob(
+    [JSON.stringify(data,null,2)],
+    {type:"application/json"}
+  );
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(file);
+  a.download="verbo-do-dia-progress.json";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+function renderRules(){
+  const host=document.getElementById("rulesContent");
+  host.innerHTML="";
+  for(const [family,ends] of Object.entries(endings)){
+    const box=document.createElement("div");
+    box.className="card";
+    const title=document.createElement("h3");
+    title.textContent="-"+family.toUpperCase();
+    box.append(title);
+    people.forEach((p,i)=>{
+      const row=document.createElement("p");
+      row.textContent=p+" → -"+ends[i];
+      box.append(row);
+    });
+    host.append(box);
+  }
+}
+
+renderRules();
+
+if(data.date!==day()||data.pair.length!==2){
+  newChallenge();
+}else{
+  render();
+}
+</script>
+</body>
+</html>
